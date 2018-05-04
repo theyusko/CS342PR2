@@ -90,7 +90,7 @@ int main(int argc, char *argv[]) {
             sdp->requestQueue[sdp->requestIn].queueIndex = i;
             strcpy(sdp->requestQueue[sdp->requestIn].keyword, keyword);
             sdp->requestIn = (sdp->requestIn + 1) % N;
-            
+
         }
     }
     sem_post(sem[N]);
@@ -101,11 +101,9 @@ int main(int argc, char *argv[]) {
     /*sem_wait(sem[N]); //hold request queue's semaphore
     sdp->result_queue_state[i] = 1;
     //sem_post(sem[N]); //release
-
 *//*    while((sdp->requestIn +1) % N == sdp->requestOut) {
             // Request Queue is full
     }*//*
-
     //sem_wait(sem[N]);
     sdp->requestQueue[sdp->requestIn].queueIndex = i;
     strcpy(sdp->requestQueue[sdp->requestIn].keyword, keyword);
@@ -124,9 +122,11 @@ int main(int argc, char *argv[]) {
             sem_post(sem[i]);
             sem_getvalue(sem[i], t);
         }*/
+        //printf("Client holds result queue %d\n", i);
         sem_wait(sem[i]); //hold result queue i's semaphore
         if(sdp->resultQueues[i][j] == -1) {
             sem_post(sem[i]);
+            //printf("Client released result queue %d finished reading will exit\n", i);
             break;
         }
         done = (sdp->inout[i][IN] == sdp->inout[i][OUT]); //if result queue is empty, done
@@ -135,12 +135,15 @@ int main(int argc, char *argv[]) {
             sdp->inout[i][OUT] = (sdp->inout[i][OUT] + 1) % BUFSIZE;
         }
         sem_post(sem[i]); //release
+        //printf("Client release result queue %d\n", i);
         j = (j + 1) % BUFSIZE;
         //if(done)
         //    break;
     }
     fflush(stdout);
     //Client Cleanup
+    //printf("Client holds request queue\n");
+    //printf("Client holds result queue %d\n", i);
     sem_wait(sem[N]);
     sem_wait(sem[i]);
     for (j = 0; j < BUFSIZE; j++) {
@@ -151,4 +154,6 @@ int main(int argc, char *argv[]) {
     sdp->inout[i][OUT] = 0;
     sem_post(sem[i]);
     sem_post(sem[N]);
+    //printf("Client released request queue\n");
+    //printf("Client released result queue %d\n", i);
 }

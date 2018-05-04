@@ -1,0 +1,4 @@
+/home/yusko/Downloads/clion-2017.3.3/bin/cmake/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" /home/yusko/Documents/CS342/CS342PR2
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/yusko/Documents/CS342/CS342PR2/cmake-build-debug

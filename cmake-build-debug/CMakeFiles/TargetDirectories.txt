@@ -1,0 +1,4 @@
+/home/yusko/Documents/CS342/CS342PR2/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/home/yusko/Documents/CS342/CS342PR2/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/yusko/Documents/CS342/CS342PR2/cmake-build-debug/CMakeFiles/client.dir
+/home/yusko/Documents/CS342/CS342PR2/cmake-build-debug/CMakeFiles/server.dir

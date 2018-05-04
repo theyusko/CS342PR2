@@ -1,0 +1,40 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/yusko/Documents/CS342/CS342PR2/server.c
+shared.h
+/home/yusko/Documents/CS342/CS342PR2/shared.h
+
+/home/yusko/Documents/CS342/CS342PR2/shared.h
+semaphore.h
+-
+stdio.h
+-
+sys/stat.h
+-
+stdio.h
+-
+stdlib.h
+-
+string.h
+-
+unistd.h
+-
+fcntl.h
+-
+sys/stat.h
+-
+sys/mman.h
+-
+sys/types.h
+-
+errno.h
+-
+pthread.h
+-
+

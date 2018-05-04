@@ -1,0 +1,1 @@
+/usr/bin/cc -g   CMakeFiles/CS342PR2.dir/client.c.o CMakeFiles/CS342PR2.dir/server.c.o  -o CS342PR2 

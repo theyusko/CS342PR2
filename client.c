@@ -21,9 +21,11 @@ int main(int argc, char *argv[]) {
 
     //Init semaphores
     for (i = 0; i < N + 1; i++) {
-        char semNo = i + '0';
+        char* semNo =(char*)malloc(2); // CHANGE 1
+	semNo[0] = i + '0'; 
+	semNo[1] = '\0';
         strcpy(sem_name[i], argv[3]);
-        strcat(sem_name[i], &semNo); //IF THAT CASTING WONT WORK USE SPRINTF
+        strcat(sem_name[i], semNo); //IF THAT CASTING WONT WORK USE SPRINTF
         //sem_unlink(sem_name[i]);
 
         sem[i] = sem_open(sem_name[i], O_RDWR);
@@ -90,7 +92,7 @@ int main(int argc, char *argv[]) {
             sdp->requestQueue[sdp->requestIn].queueIndex = i;
             strcpy(sdp->requestQueue[sdp->requestIn].keyword, keyword);
             sdp->requestIn = (sdp->requestIn + 1) % N;
-
+            
         }
     }
     sem_post(sem[N]);
@@ -101,9 +103,11 @@ int main(int argc, char *argv[]) {
     /*sem_wait(sem[N]); //hold request queue's semaphore
     sdp->result_queue_state[i] = 1;
     //sem_post(sem[N]); //release
+
 *//*    while((sdp->requestIn +1) % N == sdp->requestOut) {
             // Request Queue is full
     }*//*
+
     //sem_wait(sem[N]);
     sdp->requestQueue[sdp->requestIn].queueIndex = i;
     strcpy(sdp->requestQueue[sdp->requestIn].keyword, keyword);
@@ -114,7 +118,7 @@ int main(int argc, char *argv[]) {
         //printf("%d\n", sdp->resultQueues[i][j]);
         j++;
     }*/
-    j = 0;
+    //j = 0;
     fflush(stdout);
     while (1) {
         /*int *t;
@@ -122,28 +126,26 @@ int main(int argc, char *argv[]) {
             sem_post(sem[i]);
             sem_getvalue(sem[i], t);
         }*/
-        //printf("Client holds result queue %d\n", i);
+		while((sdp->inout[i][IN]) % BUFSIZE == sdp->inout[i][OUT]) {} // CHANGE 5
+
         sem_wait(sem[i]); //hold result queue i's semaphore
-        if(sdp->resultQueues[i][j] == -1) {
+        if(sdp->resultQueues[i][sdp->inout[i][OUT]] == -1) {
             sem_post(sem[i]);
-            //printf("Client released result queue %d finished reading will exit\n", i);
+			sdp->inout[i][OUT] = (sdp->inout[i][OUT] + 1) % BUFSIZE; // CHANGE 6
             break;
         }
-        done = (sdp->inout[i][IN] == sdp->inout[i][OUT]); //if result queue is empty, done
+        //done = (sdp->inout[i][IN] == sdp->inout[i][OUT]); //if result queue is empty, done
         if (sdp->resultQueues[i][sdp->inout[i][OUT]] != 0 && sdp->resultQueues[i][sdp->inout[i][OUT]] != -1) {
             printf("%d\n", sdp->resultQueues[i][sdp->inout[i][OUT]]);
-            sdp->inout[i][OUT] = (sdp->inout[i][OUT] + 1) % BUFSIZE;
         }
+		sdp->inout[i][OUT] = (sdp->inout[i][OUT] + 1) % BUFSIZE;
         sem_post(sem[i]); //release
-        //printf("Client release result queue %d\n", i);
-        j = (j + 1) % BUFSIZE;
+        //j = (j + 1) % BUFSIZE;
         //if(done)
         //    break;
     }
     fflush(stdout);
     //Client Cleanup
-    //printf("Client holds request queue\n");
-    //printf("Client holds result queue %d\n", i);
     sem_wait(sem[N]);
     sem_wait(sem[i]);
     for (j = 0; j < BUFSIZE; j++) {
@@ -154,6 +156,4 @@ int main(int argc, char *argv[]) {
     sdp->inout[i][OUT] = 0;
     sem_post(sem[i]);
     sem_post(sem[N]);
-    //printf("Client released request queue\n");
-    //printf("Client released result queue %d\n", i);
 }

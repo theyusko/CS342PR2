@@ -17,6 +17,7 @@ struct param {
 };
 
 int main(int argc, char *argv[]) {
+
     sem_t *sem[N + 1];
     pthread_t thread_ids[N];
     int fd, i, ret;
@@ -24,9 +25,6 @@ int main(int argc, char *argv[]) {
     void *shm_start;
     struct shared *sdp;
     struct param *par;
-    par = (struct param *) malloc(sizeof(struct param));
-    par->req = (struct request *) malloc(sizeof(struct request));
-    par->sdp = (struct shared *) malloc(sizeof(struct shared));
 
     if (argc != 4) {
         printf("Input format where f is fileName and k is keyword: server <shm_name> <inputfilename> <sem_name>");
@@ -42,12 +40,13 @@ int main(int argc, char *argv[]) {
     }
 
     strcpy(shm_name, argv[1]);
-    strcpy(par->file_name, argv[2]);
     //Create and init semaphores
     for (i = 0; i < N + 1; i++) {
-        char semNo = i + '0';
+        char* semNo = (char*)malloc(2); // CHANGE 1
+		semNo[0] = i + '0';
+		semNo[1] = '\0';
         strcpy(sem_name[i], argv[3]);
-        strcat(sem_name[i], &semNo); //IF THAT CASTING WONT WORK USE SPRINTF
+        strcat(sem_name[i], semNo); //IF THAT CASTING WONT WORK USE SPRINTF
         sem_unlink(sem_name[i]);
 
         sem[i] = sem_open(sem_name[i], O_RDWR | O_CREAT, 0660, 1); //might add O_RDWR
@@ -108,12 +107,19 @@ int main(int argc, char *argv[]) {
     while (1) {
         fflush(stdout);
         //Wait for a request to arrive
-        while (sdp->requestIn == sdp->requestOut) {
+		int has_req = 0;
+		while (!has_req) { // CHANGE 2
+        	sem_wait(sem[N]); //hold request queue
+			if (sdp->requestIn == sdp->requestOut) sem_post(sem[N]);
+            else has_req = 1;
             //printf("request queue is empty\n");
         }
-        printf("Server holds request queue\n");
+
         //Retrieve request from request queue & Create a Thread
-        sem_wait(sem[N]); //hold request queue
+		par = (struct param *) malloc(sizeof(struct param)); // CHANGE 3
+        par->req = (struct request *) malloc(sizeof(struct request));
+        par->sdp = (struct shared *) malloc(sizeof(struct shared));
+		strcpy(par->file_name, argv[2]);
         par->req->queueIndex = sdp->requestQueue[sdp->requestOut].queueIndex;
         //strcpy(par->req->keyword, "one");
         strcpy(par->req->keyword, sdp->requestQueue[sdp->requestOut].keyword);
@@ -124,7 +130,6 @@ int main(int argc, char *argv[]) {
         strcpy(sdp->requestQueue[sdp->requestOut].keyword, "");
         sdp->requestOut = (sdp->requestOut + 1) % N;
         sem_post(sem[N]); //release request queue
-        printf("Server released request queue\n");
 
         ret = pthread_create(&(thread_ids[qindex]), NULL, keywordSearchThread, (void *) par);
         if (ret != 0) {
@@ -178,49 +183,44 @@ void *keywordSearchThread(void *arg) {
         //printf("Error: Couldn't open file.\n");
         pthread_exit(NULL);
     }
-    printf("keyword: %s\n", p->req->keyword);
+
     str = malloc(MAXLINE * sizeof(char));
     while (fgets(str, MAXLINE, file) != NULL) { //fgets() reads a line
         //printf("Read line %d\n", lineNo);
-        
         if (strstr(str, p->req->keyword) != NULL) { //strstr() returns a pointer to the first occurrence of keyword
-            //hold result queue of qindex
+             //hold result queue of qindex
             //TODO: Do we need to put this inside a do-while loop and add semaphore of i'th result queue ??
             while ((p->sdp->inout[qindex][IN] + 1) % BUFSIZE == p->sdp->inout[qindex][OUT]) {
                 //printf("Result queue %d is full", qindex);
             }
-            //printf("Thread holds result queue\n");
+            //printf("Wait finished");
             sem_wait(p->sem_resultq);
 
             p->sdp->resultQueues[qindex][p->sdp->inout[qindex][IN]] = lineNo;
             p->sdp->inout[qindex][IN] = (p->sdp->inout[qindex][IN] + 1) % BUFSIZE;
             sem_post(p->sem_resultq); //release result queue of qindex
-            //printf("Thread released result queue\n");
             //printf("Line: %d.\n", lineNo);
             //found = 1;
         }
         lineNo++;
     }
 
-    //Add a -1 to the end
-    //printf("Thread holds result queue\n");
+	//Add a -1 to the end
+    while ((p->sdp->inout[qindex][IN] + 1) % BUFSIZE == p->sdp->inout[qindex][OUT]) {} // CHANGE 4
     sem_wait(p->sem_resultq); //hold result queue of qindex
     p->sdp->resultQueues[qindex][p->sdp->inout[qindex][IN]] = -1;
     p->sdp->inout[qindex][IN] = (p->sdp->inout[qindex][IN] + 1) % BUFSIZE;
     sem_post(p->sem_resultq); //release result queue of qindex
-    //printf("Thread released result queue\n");
 
     fclose(file); //TODO: DIDN'T CHECK if file is already closed. Might cause problem.
     //printf("thread exiting...\n");
     //TODO:free str space
     //p->sdp->requestQueue[qindex].queueIndex = -1;
-    //printf("Thread holds request queue\n");
     sem_wait(p->sem_n);
     memset(p->sdp->requestQueue[qindex].keyword, 0, sizeof(p->sdp->requestQueue[qindex].keyword));
-    //p->sdp->requestIn = 0;
-    //p->sdp->requestOut = 0;
+    p->sdp->requestIn = 0;
+    p->sdp->requestOut = 0;
     sem_post(p->sem_n);
-    //printf("Thread released request queue\n");
     free(str);
     str = NULL;
     fflush(stdout);
